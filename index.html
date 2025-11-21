@@ -6,6 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CI/CD Performance Analytics</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <link rel="stylesheet"
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap">
@@ -46,28 +51,47 @@
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
             background: #94a3b8;
         }
+
+        /* Dark mode scrollbar */
+        .dark .custom-scrollbar::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #334155;
+        }
+
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 
-<body class="bg-slate-50 text-slate-800 h-screen flex flex-col overflow-hidden">
+<body class="bg-slate-50 text-slate-800 h-screen flex flex-col overflow-hidden dark:bg-slate-950 dark:text-slate-200">
 
     <!-- Navigation Bar -->
-    <nav class="bg-white border-b border-slate-200 h-16 flex-none px-6 flex items-center justify-between z-10">
+    <nav
+        class="bg-white border-b border-slate-200 h-16 flex-none px-6 flex items-center justify-between z-10 dark:bg-slate-900 dark:border-slate-800">
         <div class="flex items-center gap-3">
             <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white">
                 <span class="material-symbols-outlined text-xl">analytics</span>
             </div>
-            <h1 class="text-lg font-bold text-slate-800 tracking-tight">Pipeline Insights</h1>
+            <h1 class="text-lg font-bold text-slate-800 tracking-tight dark:text-white">Pipeline Insights</h1>
         </div>
         <div class="flex items-center gap-4">
             <button
-                class="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-md transition-colors">
+                class="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-md transition-colors dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200">
                 <span class="material-symbols-outlined text-[18px]">help</span>
                 <span>ヘルプ</span>
             </button>
+            <button id="theme-toggle"
+                class="flex items-center justify-center w-8 h-8 text-slate-600 hover:bg-slate-100 rounded-md transition-colors dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200">
+                <span class="material-symbols-outlined text-[20px] dark:hidden">dark_mode</span>
+                <span class="material-symbols-outlined text-[20px] hidden dark:block">light_mode</span>
+            </button>
             <div
-                class="h-8 w-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 font-medium text-sm cursor-pointer">
+                class="h-8 w-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 font-medium text-sm cursor-pointer dark:bg-slate-800 dark:text-slate-400">
                 MJ
             </div>
         </div>
@@ -77,7 +101,8 @@
     <div class="flex-1 flex overflow-hidden">
 
         <!-- Sidebar (Visual only) -->
-        <aside class="w-64 bg-white border-r border-slate-200 flex-none hidden md:flex flex-col py-4">
+        <aside
+            class="w-64 bg-white border-r border-slate-200 flex-none hidden md:flex flex-col py-4 dark:bg-slate-900 dark:border-slate-800">
             <div class="px-4 mb-6">
                 <button id="import-btn"
                     class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors shadow-sm group">
@@ -87,24 +112,27 @@
                 <input type="file" id="csv-input" accept=".csv" class="hidden">
             </div>
             <nav class="space-y-1 px-2 text-sm font-medium">
-                <a href="#" class="flex items-center gap-3 px-3 py-2 text-indigo-600 bg-indigo-50 rounded-md">
+                <a href="#"
+                    class="flex items-center gap-3 px-3 py-2 text-indigo-600 bg-indigo-50 rounded-md dark:bg-indigo-900/20 dark:text-indigo-400">
                     <span class="material-symbols-outlined">monitoring</span>
                     ダッシュボード
                 </a>
-                <a href="#" class="flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-50 rounded-md">
+                <a href="#"
+                    class="flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-50 rounded-md dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200">
                     <span class="material-symbols-outlined">history</span>
                     実行履歴
                 </a>
-                <a href="#" class="flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-50 rounded-md">
+                <a href="#"
+                    class="flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-50 rounded-md dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200">
                     <span class="material-symbols-outlined">settings</span>
                     設定
                 </a>
             </nav>
 
             <div class="mt-auto px-4 pb-4">
-                <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
-                    <p class="text-xs font-semibold text-slate-500 uppercase mb-2">データソース</p>
-                    <div class="flex items-center gap-2 text-sm text-slate-700 truncate">
+                <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 dark:bg-slate-800 dark:border-slate-700">
+                    <p class="text-xs font-semibold text-slate-500 uppercase mb-2 dark:text-slate-400">データソース</p>
+                    <div class="flex items-center gap-2 text-sm text-slate-700 truncate dark:text-slate-300">
                         <span class="material-symbols-outlined text-slate-400 text-base">description</span>
                         <span class="truncate" id="filename-display">No File Selected</span>
                     </div>
@@ -122,94 +150,113 @@
             <!-- Header Section -->
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
                 <div>
-                    <h2 class="text-2xl font-bold text-slate-900" id="project-title">Project Analytics</h2>
-                    <p class="text-sm text-slate-500 mt-1">実行パフォーマンスと傾向分析</p>
+                    <h2 class="text-2xl font-bold text-slate-900 dark:text-white" id="project-title">Project Analytics
+                    </h2>
+                    <p class="text-sm text-slate-500 mt-1 dark:text-slate-400">実行パフォーマンスと傾向分析</p>
                 </div>
-                <div class="flex items-center bg-white rounded-lg shadow-sm border border-slate-200 p-1">
+                <div
+                    class="flex items-center bg-white rounded-lg shadow-sm border border-slate-200 p-1 dark:bg-slate-900 dark:border-slate-800">
                     <button data-range="24h"
-                        class="time-range-btn px-3 py-1 text-sm font-medium text-indigo-600 bg-indigo-50 rounded shadow-sm transition-colors">24時間</button>
+                        class="time-range-btn px-3 py-1 text-sm font-medium text-indigo-600 bg-indigo-50 rounded shadow-sm transition-colors dark:bg-indigo-900/20 dark:text-indigo-400">24時間</button>
                     <button data-range="7d"
-                        class="time-range-btn px-3 py-1 text-sm font-medium text-slate-600 hover:text-slate-900 rounded hover:bg-slate-50 transition-colors">7日間</button>
+                        class="time-range-btn px-3 py-1 text-sm font-medium text-slate-600 hover:text-slate-900 rounded hover:bg-slate-50 transition-colors dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800">7日間</button>
                     <button data-range="30d"
-                        class="time-range-btn px-3 py-1 text-sm font-medium text-slate-600 hover:text-slate-900 rounded hover:bg-slate-50 transition-colors">30日間</button>
+                        class="time-range-btn px-3 py-1 text-sm font-medium text-slate-600 hover:text-slate-900 rounded hover:bg-slate-50 transition-colors dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800">30日間</button>
                     <button data-range="all"
-                        class="time-range-btn px-3 py-1 text-sm font-medium text-slate-600 hover:text-slate-900 rounded hover:bg-slate-50 transition-colors">全期間</button>
+                        class="time-range-btn px-3 py-1 text-sm font-medium text-slate-600 hover:text-slate-900 rounded hover:bg-slate-50 transition-colors dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800">全期間</button>
                 </div>
             </div>
 
             <!-- KPI Cards -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <!-- Card 1 -->
-                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 relative overflow-hidden group">
+                <div
+                    class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 relative overflow-hidden group dark:bg-slate-900 dark:border-slate-800">
                     <div class="flex justify-between items-start mb-4">
                         <div>
-                            <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">平均実行時間</p>
-                            <h3 class="text-2xl font-bold text-slate-900 mt-1" id="kpi-avg-duration">-</h3>
+                            <p class="text-xs font-medium text-slate-500 uppercase tracking-wider dark:text-slate-400">
+                                平均実行時間</p>
+                            <h3 class="text-2xl font-bold text-slate-900 mt-1 dark:text-white" id="kpi-avg-duration">-
+                            </h3>
                         </div>
-                        <div class="p-2 bg-blue-50 rounded-lg text-blue-600">
+                        <div class="p-2 bg-blue-50 rounded-lg text-blue-600 dark:bg-blue-900/20 dark:text-blue-400">
                             <span class="material-symbols-outlined">timer</span>
                         </div>
                     </div>
-                    <div class="flex items-center text-xs font-medium text-slate-500" id="kpi-avg-trend">
+                    <div class="flex items-center text-xs font-medium text-slate-500 dark:text-slate-400"
+                        id="kpi-avg-trend">
                         <span>-</span>
                     </div>
                 </div>
 
                 <!-- Card 2 -->
-                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 relative overflow-hidden">
+                <div
+                    class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 relative overflow-hidden dark:bg-slate-900 dark:border-slate-800">
                     <div class="flex justify-between items-start mb-4">
                         <div>
-                            <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">成功率</p>
-                            <h3 class="text-2xl font-bold text-slate-900 mt-1" id="kpi-success-rate">-</h3>
+                            <p class="text-xs font-medium text-slate-500 uppercase tracking-wider dark:text-slate-400">
+                                成功率</p>
+                            <h3 class="text-2xl font-bold text-slate-900 mt-1 dark:text-white" id="kpi-success-rate">-
+                            </h3>
                         </div>
-                        <div class="p-2 bg-emerald-50 rounded-lg text-emerald-600">
+                        <div
+                            class="p-2 bg-emerald-50 rounded-lg text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400">
                             <span class="material-symbols-outlined">check_circle</span>
                         </div>
                     </div>
-                    <div class="flex items-center text-xs font-medium text-slate-500">
+                    <div class="flex items-center text-xs font-medium text-slate-500 dark:text-slate-400">
                         <span id="kpi-success-count">-</span>
                     </div>
                 </div>
 
                 <!-- Card 3 -->
-                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 relative overflow-hidden">
+                <div
+                    class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 relative overflow-hidden dark:bg-slate-900 dark:border-slate-800">
                     <div class="flex justify-between items-start mb-4">
                         <div>
-                            <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">合計実行回数</p>
-                            <h3 class="text-2xl font-bold text-slate-900 mt-1" id="kpi-total-runs">-</h3>
+                            <p class="text-xs font-medium text-slate-500 uppercase tracking-wider dark:text-slate-400">
+                                合計実行回数</p>
+                            <h3 class="text-2xl font-bold text-slate-900 mt-1 dark:text-white" id="kpi-total-runs">-
+                            </h3>
                         </div>
-                        <div class="p-2 bg-violet-50 rounded-lg text-violet-600">
+                        <div
+                            class="p-2 bg-violet-50 rounded-lg text-violet-600 dark:bg-violet-900/20 dark:text-violet-400">
                             <span class="material-symbols-outlined">repeat</span>
                         </div>
                     </div>
-                    <div class="flex items-center text-xs font-medium text-slate-500">
+                    <div class="flex items-center text-xs font-medium text-slate-500 dark:text-slate-400">
                         <span id="kpi-frequency">-</span>
                     </div>
                 </div>
 
                 <!-- Card 4 -->
-                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 relative overflow-hidden">
+                <div
+                    class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 relative overflow-hidden dark:bg-slate-900 dark:border-slate-800">
                     <div class="flex justify-between items-start mb-4">
                         <div>
-                            <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">最新ステータス</p>
-                            <h3 class="text-xl font-bold mt-1 text-slate-400" id="kpi-latest-status">-</h3>
+                            <p class="text-xs font-medium text-slate-500 uppercase tracking-wider dark:text-slate-400">
+                                最新ステータス</p>
+                            <h3 class="text-xl font-bold mt-1 text-slate-400 dark:text-slate-500"
+                                id="kpi-latest-status">-</h3>
                         </div>
-                        <div class="p-2 bg-orange-50 rounded-lg text-orange-600">
+                        <div
+                            class="p-2 bg-orange-50 rounded-lg text-orange-600 dark:bg-orange-900/20 dark:text-orange-400">
                             <span class="material-symbols-outlined">update</span>
                         </div>
                     </div>
-                    <div class="text-xs text-slate-400" id="kpi-latest-time">-</div>
+                    <div class="text-xs text-slate-400 dark:text-slate-500" id="kpi-latest-time">-</div>
                 </div>
             </div>
 
             <!-- Main Chart Section -->
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-8">
+            <div
+                class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-8 dark:bg-slate-900 dark:border-slate-800">
                 <div class="flex items-center justify-between mb-6">
-                    <h3 class="text-lg font-bold text-slate-800">実行時間の推移 (Duration Trend)</h3>
+                    <h3 class="text-lg font-bold text-slate-800 dark:text-white">実行時間の推移 (Duration Trend)</h3>
                     <div class="flex items-center gap-2">
-                        <span class="flex items-center gap-1 text-xs text-slate-500"><span
+                        <span class="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400"><span
                                 class="w-2 h-2 rounded-full bg-emerald-500"></span>Success</span>
-                        <span class="flex items-center gap-1 text-xs text-slate-500"><span
+                        <span class="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400"><span
                                 class="w-2 h-2 rounded-full bg-rose-500"></span>Failure</span>
                     </div>
                 </div>
@@ -227,24 +274,28 @@
                         <!-- SVG Content will be injected here -->
                     </svg>
                     <div id="chart-empty-state"
-                        class="absolute inset-0 flex items-center justify-center text-slate-400 text-sm">
+                        class="absolute inset-0 flex items-center justify-center text-slate-400 text-sm dark:text-slate-600">
                         データがありません
                     </div>
                 </div>
             </div>
 
             <!-- Data Table Section -->
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                    <h3 class="text-sm font-bold text-slate-700 uppercase tracking-wide">詳細ログ</h3>
-                    <button class="text-xs text-indigo-600 font-medium hover:underline flex items-center gap-1">
+            <div
+                class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden dark:bg-slate-900 dark:border-slate-800">
+                <div
+                    class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/50 dark:border-slate-800">
+                    <h3 class="text-sm font-bold text-slate-700 uppercase tracking-wide dark:text-slate-300">詳細ログ</h3>
+                    <button
+                        class="text-xs text-indigo-600 font-medium hover:underline flex items-center gap-1 dark:text-indigo-400">
                         全データをダウンロード
                         <span class="material-symbols-outlined text-sm">download</span>
                     </button>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm text-left">
-                        <thead class="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-200">
+                        <thead
+                            class="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400">
                             <tr>
                                 <th class="px-6 py-3 font-medium">Run #</th>
                                 <th class="px-6 py-3 font-medium">Status</th>
@@ -253,11 +304,12 @@
                                 <th class="px-6 py-3 font-medium text-right">Action</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-slate-100" id="table-body">
+                        <tbody class="divide-y divide-slate-100 dark:divide-slate-800" id="table-body">
                             <!-- Table rows will be injected here -->
                         </tbody>
                     </table>
-                    <div id="table-empty-state" class="p-8 text-center text-slate-400 text-sm hidden">
+                    <div id="table-empty-state"
+                        class="p-8 text-center text-slate-400 text-sm hidden dark:text-slate-600">
                         表示するデータがありません
                     </div>
                 </div>
@@ -274,8 +326,32 @@
 
         const App = {
             init() {
+                this.setupTheme();
                 this.setupEventListeners();
                 this.renderEmptyState();
+            },
+
+            setupTheme() {
+                const themeToggleBtn = document.getElementById('theme-toggle');
+                const html = document.documentElement;
+
+                // Check local storage or system preference
+                if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                    html.classList.add('dark');
+                } else {
+                    html.classList.remove('dark');
+                }
+
+                themeToggleBtn.addEventListener('click', () => {
+                    html.classList.toggle('dark');
+                    if (html.classList.contains('dark')) {
+                        localStorage.theme = 'dark';
+                    } else {
+                        localStorage.theme = 'light';
+                    }
+                    // Re-render chart to update colors
+                    this.renderChart();
+                });
             },
 
             setupEventListeners() {
@@ -443,6 +519,10 @@
                 const xScale = (index) => padding.left + (index / (chartData.length - 1 || 1)) * (width - padding.left - padding.right);
                 const yScale = (val) => height - padding.bottom - (val / maxDur) * (height - padding.top - padding.bottom);
 
+                const isDark = document.documentElement.classList.contains('dark');
+                const gridColor = isDark ? '#1e293b' : '#f1f5f9'; // slate-800 : slate-100
+                const textColor = isDark ? '#64748b' : '#94a3b8'; // slate-500 : slate-400
+
                 // 1. Grid Lines
                 const gridCount = 5;
                 for (let i = 0; i <= gridCount; i++) {
@@ -454,7 +534,7 @@
                     line.setAttribute("y1", y);
                     line.setAttribute("x2", width - padding.right);
                     line.setAttribute("y2", y);
-                    line.setAttribute("stroke", "#f1f5f9");
+                    line.setAttribute("stroke", gridColor);
                     line.setAttribute("stroke-width", "1");
                     svg.appendChild(line);
 
@@ -462,7 +542,7 @@
                     text.setAttribute("x", padding.left - 10);
                     text.setAttribute("y", y + 4);
                     text.setAttribute("text-anchor", "end");
-                    text.setAttribute("fill", "#94a3b8");
+                    text.setAttribute("fill", textColor);
                     text.setAttribute("font-size", "10");
                     text.textContent = Math.round(val) + 's';
                     svg.appendChild(text);
@@ -553,11 +633,11 @@
 
                 tableData.forEach(d => {
                     const tr = document.createElement('tr');
-                    tr.className = "hover:bg-slate-50 transition-colors group";
+                    tr.className = "hover:bg-slate-50 transition-colors group dark:hover:bg-slate-800/50";
 
                     const statusColor = d.conclusion === 'success'
-                        ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
-                        : 'bg-rose-100 text-rose-700 border-rose-200';
+                        ? 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-900/30'
+                        : 'bg-rose-100 text-rose-700 border-rose-200 dark:bg-rose-900/20 dark:text-rose-400 dark:border-rose-900/30';
 
                     const icon = d.conclusion === 'success' ? 'check' : 'close';
 
@@ -566,7 +646,7 @@
                     const barWidth = (d.duration_sec / maxDur) * 100;
 
                     tr.innerHTML = `
-                        <td class="px-6 py-4 font-mono text-slate-600">#${d.run_number}</td>
+                        <td class="px-6 py-4 font-mono text-slate-600 dark:text-slate-400">#${d.run_number}</td>
                         <td class="px-6 py-4">
                             <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border ${statusColor}">
                                 <span class="material-symbols-outlined text-[14px] font-bold">${icon}</span>
@@ -575,15 +655,15 @@
                         </td>
                         <td class="px-6 py-4">
                             <div class="flex items-center gap-2">
-                                <span class="font-medium text-slate-700">${d.duration_sec}s</span>
-                                <div class="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                <span class="font-medium text-slate-700 dark:text-slate-300">${d.duration_sec}s</span>
+                                <div class="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden dark:bg-slate-800">
                                     <div class="h-full ${d.conclusion === 'success' ? 'bg-indigo-500' : 'bg-rose-500'}" style="width: ${barWidth}%"></div>
                                 </div>
                             </div>
                         </td>
-                        <td class="px-6 py-4 text-slate-500">${this.formatDate(d.created_at)}</td>
+                        <td class="px-6 py-4 text-slate-500 dark:text-slate-400">${this.formatDate(d.created_at)}</td>
                         <td class="px-6 py-4 text-right">
-                            <a href="${d.html_url}" target="_blank" class="text-slate-400 hover:text-indigo-600 transition-colors p-1 rounded hover:bg-indigo-50 inline-block">
+                            <a href="${d.html_url}" target="_blank" class="text-slate-400 hover:text-indigo-600 transition-colors p-1 rounded hover:bg-indigo-50 inline-block dark:text-slate-500 dark:hover:text-indigo-400 dark:hover:bg-indigo-900/20">
                                 <span class="material-symbols-outlined">open_in_new</span>
                             </a>
                         </td>
