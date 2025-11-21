@@ -165,6 +165,22 @@
                     <button data-range="all"
                         class="time-range-btn px-3 py-1 text-sm font-medium text-slate-600 hover:text-slate-900 rounded hover:bg-slate-50 transition-colors dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800">全期間</button>
                 </div>
+                <div class="flex items-center gap-4 ml-4 border-l border-slate-200 pl-4 dark:border-slate-800">
+                    <label class="flex items-center gap-2 cursor-pointer group">
+                        <input type="checkbox" id="filter-failures"
+                            class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 dark:border-slate-600 dark:bg-slate-800">
+                        <span
+                            class="text-sm text-slate-600 group-hover:text-slate-900 transition-colors dark:text-slate-400 dark:group-hover:text-slate-200">失敗を非表示</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer group relative"
+                        title="四分位範囲(IQR)法に基づいて、極端に長い実行時間を除外します">
+                        <input type="checkbox" id="filter-outliers"
+                            class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 dark:border-slate-600 dark:bg-slate-800">
+                        <span
+                            class="text-sm text-slate-600 group-hover:text-slate-900 transition-colors dark:text-slate-400 dark:group-hover:text-slate-200">外れ値を非表示</span>
+                        <span class="material-symbols-outlined text-[16px] text-slate-400">info</span>
+                    </label>
+                </div>
             </div>
 
             <!-- KPI Cards -->
@@ -328,6 +344,8 @@
         let rawData = [];
         let filteredData = [];
         let currentRange = '24h';
+        let filterFailures = false;
+        let filterOutliers = false;
         let itemsPerPage = 50;
         let currentRenderCount = 0;
 
@@ -386,6 +404,17 @@
                         currentRange = e.target.dataset.range;
                         this.filterData(currentRange);
                     });
+                });
+
+                // Filter Checkboxes
+                document.getElementById('filter-failures').addEventListener('change', (e) => {
+                    filterFailures = e.target.checked;
+                    this.filterData(currentRange);
+                });
+
+                document.getElementById('filter-outliers').addEventListener('change', (e) => {
+                    filterOutliers = e.target.checked;
+                    this.filterData(currentRange);
                 });
 
                 // Infinite Scroll
@@ -460,7 +489,27 @@
                 else if (range === '30d') startTime = latestTime - 30 * 24 * 60 * 60 * 1000;
                 else startTime = 0; // All time
 
-                filteredData = rawData.filter(d => d.timestamp >= startTime);
+                // 1. Time Range Filter
+                let tempFiltered = rawData.filter(d => d.timestamp >= startTime);
+
+                // 2. Failure Filter
+                if (filterFailures) {
+                    tempFiltered = tempFiltered.filter(d => d.conclusion === 'success');
+                }
+
+                // 3. Outlier Filter (IQR Method)
+                if (filterOutliers && tempFiltered.length > 4) {
+                    const durations = tempFiltered.map(d => d.duration_sec).sort((a, b) => a - b);
+                    const q1 = durations[Math.floor(durations.length * 0.25)];
+                    const q3 = durations[Math.floor(durations.length * 0.75)];
+                    const iqr = q3 - q1;
+                    const upperFence = q3 + 1.5 * iqr;
+
+                    // Only filter upper outliers (too slow)
+                    tempFiltered = tempFiltered.filter(d => d.duration_sec <= upperFence);
+                }
+
+                filteredData = tempFiltered;
 
                 // Sort for chart (Oldest -> Newest)
                 // But rawData is Newest -> Oldest.
