@@ -314,6 +314,11 @@
                     </div>
                 </div>
             </div>
+            <!-- Sentinel for Infinite Scroll -->
+            <div id="load-more-trigger"
+                class="h-8 w-full flex items-center justify-center text-slate-400 text-sm hidden">
+                <span class="animate-pulse">Loading more...</span>
+            </div>
 
         </main>
     </div>
@@ -323,6 +328,8 @@
         let rawData = [];
         let filteredData = [];
         let currentRange = '24h';
+        let itemsPerPage = 50;
+        let currentRenderCount = 0;
 
         const App = {
             init() {
@@ -380,6 +387,18 @@
                         this.filterData(currentRange);
                     });
                 });
+
+                // Infinite Scroll
+                const observer = new IntersectionObserver((entries) => {
+                    if (entries[0].isIntersecting) {
+                        this.renderTable(false);
+                    }
+                }, { root: null, rootMargin: '100px', threshold: 0.1 });
+
+                const sentinel = document.getElementById('load-more-trigger');
+                if (sentinel) {
+                    observer.observe(sentinel);
+                }
             },
 
             handleFileUpload(file) {
@@ -456,7 +475,7 @@
 
                 this.renderKPIs();
                 this.renderChart();
-                this.renderTable();
+                this.renderTable(true);
             },
 
             renderEmptyState() {
@@ -618,20 +637,37 @@
                 });
             },
 
-            renderTable() {
+            renderTable(reset = false) {
                 const tbody = document.getElementById('table-body');
-                tbody.innerHTML = '';
+                const sentinel = document.getElementById('load-more-trigger');
 
-                if (filteredData.length === 0) {
-                    document.getElementById('table-empty-state').classList.remove('hidden');
+                if (reset) {
+                    tbody.innerHTML = '';
+                    currentRenderCount = 0;
+                    if (filteredData.length === 0) {
+                        document.getElementById('table-empty-state').classList.remove('hidden');
+                        sentinel.classList.add('hidden');
+                        return;
+                    }
+                }
+
+                if (currentRenderCount >= filteredData.length) {
+                    sentinel.classList.add('hidden');
                     return;
                 }
 
-                // Table shows Newest -> Oldest (filteredData is already sorted this way)
-                // Limit to 50 rows for performance
-                const tableData = filteredData.slice(0, 50);
+                sentinel.classList.remove('hidden');
 
-                tableData.forEach(d => {
+                // Table shows Newest -> Oldest (filteredData is already sorted this way)
+                const nextBatch = filteredData.slice(currentRenderCount, currentRenderCount + itemsPerPage);
+
+                // Calculate max duration for the ENTIRE dataset for consistent bar widths, 
+                // OR just for the current batch? 
+                // Usually better to use the max of the visible set or the whole set. 
+                // Let's use the whole filtered set max to be consistent across scrolls.
+                const maxDur = Math.max(...filteredData.map(x => x.duration_sec)) || 1;
+
+                nextBatch.forEach(d => {
                     const tr = document.createElement('tr');
                     tr.className = "hover:bg-slate-50 transition-colors group dark:hover:bg-slate-800/50";
 
@@ -641,8 +677,6 @@
 
                     const icon = d.conclusion === 'success' ? 'check' : 'close';
 
-                    // Calculate bar width relative to max duration in this set
-                    const maxDur = Math.max(...tableData.map(x => x.duration_sec)) || 1;
                     const barWidth = (d.duration_sec / maxDur) * 100;
 
                     tr.innerHTML = `
@@ -670,6 +704,12 @@
                     `;
                     tbody.appendChild(tr);
                 });
+
+                currentRenderCount += nextBatch.length;
+
+                if (currentRenderCount >= filteredData.length) {
+                    sentinel.classList.add('hidden');
+                }
             }
         };
 
