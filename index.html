@@ -14,17 +14,40 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 
     <style>
+        /* Light Theme (Default) */
         :root {
-            --primary: #2563eb;       /* Modern Blue */
-            --primary-hover: #1d4ed8;
-            --bg-color: #f3f4f6;      /* Light Gray */
+            --bg-color: #f3f4f6;
             --card-bg: #ffffff;
             --text-main: #1f2937;
             --text-sub: #6b7280;
+            --border-color: #e5e7eb;
+            --input-bg: #f9fafb;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
             --accent-success: #10b981;
-            --border-radius: 12px;
-            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --accent-danger: #ef4444;
+            --chart-grid: #e5e7eb;
+            --chart-text: #6b7280;
+            
             --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        /* Dark Theme Override */
+        [data-theme="dark"] {
+            --bg-color: #0f172a;       /* Slate 900 */
+            --card-bg: #1e293b;        /* Slate 800 */
+            --text-main: #f1f5f9;      /* Slate 100 */
+            --text-sub: #94a3b8;       /* Slate 400 */
+            --border-color: #334155;   /* Slate 700 */
+            --input-bg: #0f172a;
+            --primary: #3b82f6;
+            --primary-hover: #60a5fa;
+            --accent-success: #34d399;
+            --accent-danger: #f87171;
+            --chart-grid: #334155;
+            --chart-text: #94a3b8;
+
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
         }
 
         body {
@@ -33,7 +56,7 @@
             color: var(--text-main);
             margin: 0;
             padding: 40px 20px;
-            line-height: 1.5;
+            transition: background-color 0.3s, color 0.3s;
         }
 
         .wrapper {
@@ -41,112 +64,118 @@
             margin: 0 auto;
         }
 
-        /* Header */
+        /* Header & Toggle */
         header {
-            text-align: center;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 40px;
         }
-        h1 {
-            font-size: 2rem;
+        .header-content h1 {
+            font-size: 1.8rem;
             font-weight: 800;
             margin: 0;
-            color: #111827;
             letter-spacing: -0.025em;
         }
         .subtitle {
             color: var(--text-sub);
-            margin-top: 8px;
-            font-size: 0.95rem;
+            margin-top: 5px;
+            font-size: 0.9rem;
+        }
+
+        .theme-toggle {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: all 0.2s;
+            box-shadow: var(--shadow-md);
+        }
+        .theme-toggle:hover {
+            border-color: var(--primary);
         }
 
         /* Cards */
         .card {
             background: var(--card-bg);
-            border-radius: var(--border-radius);
+            border-radius: 12px;
             box-shadow: var(--shadow-md);
             padding: 24px;
             margin-bottom: 24px;
-            border: 1px solid rgba(0,0,0,0.04);
+            border: 1px solid var(--border-color);
+            transition: background-color 0.3s, border-color 0.3s;
         }
 
-        /* Input Area Layout */
+        /* Inputs */
         .input-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 24px;
-            align-items: stretch;
         }
-        @media (max-width: 768px) {
-            .input-grid { grid-template-columns: 1fr; }
-        }
+        @media (max-width: 768px) { .input-grid { grid-template-columns: 1fr; } }
 
         .input-group h3 {
-            font-size: 0.875rem;
+            font-size: 0.8rem;
             text-transform: uppercase;
-            letter-spacing: 0.05em;
             color: var(--text-sub);
-            margin: 0 0 12px 0;
-            font-weight: 700;
+            margin: 0 0 10px 0;
+            letter-spacing: 0.05em;
         }
 
-        /* File Upload Styling */
+        /* File Upload (Fixed) */
         .file-upload-wrapper {
-            border: 2px dashed #e5e7eb;
-            border-radius: var(--border-radius);
+            border: 2px dashed var(--border-color);
+            border-radius: 12px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             height: 140px;
-            transition: all 0.2s ease;
             cursor: pointer;
-            background: #f9fafb;
+            background: var(--input-bg);
             position: relative;
+            transition: border-color 0.2s;
         }
         .file-upload-wrapper:hover {
             border-color: var(--primary);
-            background: #eff6ff;
         }
+        /* input自体を前面に広げてクリック判定を持たせる（JSでのclick発火を廃止） */
         .file-upload-wrapper input[type="file"] {
             position: absolute;
+            top: 0; left: 0;
             width: 100%;
             height: 100%;
             opacity: 0;
             cursor: pointer;
         }
-        .upload-icon {
-            font-size: 24px;
-            margin-bottom: 8px;
-            color: var(--text-sub);
+        .upload-content {
+            text-align: center;
+            pointer-events: none; /* 下の要素がクリックを邪魔しないように */
         }
-        .upload-text {
-            font-size: 0.9rem;
-            color: var(--text-main);
-            font-weight: 500;
-        }
+        .upload-icon { font-size: 24px; margin-bottom: 8px; }
+        .upload-text { font-size: 0.9rem; color: var(--text-main); font-weight: 500; }
 
-        /* Textarea Styling */
+        /* Textarea */
         textarea {
             width: 100%;
             height: 140px;
             box-sizing: border-box;
             border-radius: 8px;
-            border: 1px solid #d1d5db;
+            border: 1px solid var(--border-color);
             padding: 12px;
             font-family: 'JetBrains Mono', monospace;
             font-size: 13px;
+            background: var(--input-bg);
+            color: var(--text-main);
             resize: vertical;
-            background: #f9fafb;
-            transition: border-color 0.2s;
-        }
-        textarea:focus {
             outline: none;
-            border-color: var(--primary);
-            background: white;
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
         }
+        textarea:focus { border-color: var(--primary); }
 
-        /* Action Button */
+        /* Button */
         .action-btn {
             display: block;
             width: 100%;
@@ -157,104 +186,72 @@
             padding: 14px;
             border-radius: 8px;
             font-weight: 600;
-            font-size: 1rem;
             cursor: pointer;
-            transition: background-color 0.2s, transform 0.1s;
-            box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
+            transition: background-color 0.2s;
         }
-        .action-btn:hover {
-            background-color: var(--primary-hover);
-            transform: translateY(-1px);
-        }
-        .action-btn:active {
-            transform: translateY(0);
-        }
+        .action-btn:hover { background-color: var(--primary-hover); }
 
-        /* Stats Grid */
+        /* Stats */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 20px;
-            margin-top: 10px;
         }
         .stat-card {
-            background: #f8fafc;
+            background: var(--input-bg);
             padding: 16px;
             border-radius: 10px;
+            border: 1px solid var(--border-color);
             border-left: 4px solid var(--primary);
         }
-        .stat-card.highlight-border {
-            border-left-color: var(--accent-success);
-        }
-        .stat-label {
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            color: var(--text-sub);
-            letter-spacing: 0.05em;
-            font-weight: 600;
-        }
-        .stat-value {
-            font-size: 1.75rem;
-            font-weight: 700;
-            color: #111827;
-            margin-top: 4px;
-        }
-        .stat-sub {
-            font-size: 0.85rem;
-            margin-left: 8px;
-            font-weight: 500;
-        }
-        .trend-up { color: #ef4444; } /* 時間が増えた */
-        .trend-down { color: var(--accent-success); } /* 時間が減った（改善） */
+        .stat-card.highlight { border-left-color: var(--accent-success); }
+        .stat-label { font-size: 0.75rem; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; }
+        .stat-value { font-size: 1.8rem; font-weight: 700; margin-top: 5px; color: var(--text-main); }
+        .trend-val { font-size: 0.9rem; margin-left: 8px; font-weight: 500; }
+        .trend-good { color: var(--accent-success); }
+        .trend-bad { color: var(--accent-danger); }
 
-        /* Chart Container */
-        .chart-container {
-            position: relative;
-            height: 450px;
-            width: 100%;
-            padding: 10px;
-        }
-
-        /* Empty State */
-        .empty-placeholder {
-            text-align: center;
-            color: var(--text-sub);
-            padding: 40px;
-        }
+        /* Chart */
+        .chart-container { position: relative; height: 450px; width: 100%; }
+        .empty-state { text-align: center; color: var(--text-sub); padding: 40px; }
     </style>
 </head>
 <body>
 
 <div class="wrapper">
     <header>
-        <h1>GitHub Actions Speed Trends</h1>
-        <div class="subtitle">CI/CD パイプラインの実行時間分析ツール</div>
+        <div class="header-content">
+            <h1>GitHub Actions Speed Trends</h1>
+            <div class="subtitle">Visualize your CI/CD performance</div>
+        </div>
+        <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn" title="Toggle Dark Mode">🌙</button>
     </header>
     
     <div class="card">
         <div class="input-grid">
             <div class="input-group">
                 <h3>Import CSV</h3>
-                <div class="file-upload-wrapper" onclick="document.getElementById('csvFile').click()">
-                    <div class="upload-icon">📂</div>
-                    <div class="upload-text">CSVファイルを選択<br><span style="font-size:0.8em; color:#9ca3af">またはここにドロップ</span></div>
+                <div class="file-upload-wrapper">
                     <input type="file" id="csvFile" accept=".csv" onchange="updateFileName(this)">
+                    <div class="upload-content">
+                        <div class="upload-icon">📂</div>
+                        <div class="upload-text">Select CSV File<br><span style="font-size:0.8em; color:var(--text-sub)">or drag & drop here</span></div>
+                    </div>
                 </div>
-                <div id="fileNameDisplay" style="margin-top:5px; font-size:0.85em; color:var(--primary); text-align:center; height:20px;"></div>
+                <div id="fileNameDisplay" style="margin-top:8px; font-size:0.85em; color:var(--primary); text-align:center; min-height:20px;"></div>
             </div>
 
             <div class="input-group">
                 <h3>Or Paste Text</h3>
-                <textarea id="csvText" placeholder="run_number,created_at,duration_sec...&#10;直接データを貼り付けることも可能です"></textarea>
+                <textarea id="csvText" placeholder="run_number,created_at,duration_sec..."></textarea>
             </div>
         </div>
         <button class="action-btn" onclick="processData()">Analyze Trends ⚡</button>
     </div>
 
     <div id="resultsArea" style="display:none;">
-        <div class="stats-grid" id="stats">
-            </div>
-
+        <div class="stats-grid" id="stats"></div>
+        
         <div class="card" style="margin-top: 24px;">
             <div class="chart-container">
                 <canvas id="myChart"></canvas>
@@ -262,14 +259,33 @@
         </div>
     </div>
     
-    <div id="emptyState" class="card empty-placeholder">
-        <p>CSVファイルを読み込むかテキストを入力して<br>解析ボタンを押してください。</p>
+    <div id="emptyState" class="card empty-state">
+        <p>Ready to analyze. Upload CSV or paste data above.</p>
     </div>
 </div>
 
 <script>
     let chartInstance = null;
+    let currentData = null; // テーマ切り替え時の再描画用にデータを保持
 
+    // === Theme Logic ===
+    function toggleTheme() {
+        const html = document.documentElement;
+        const btn = document.getElementById('themeBtn');
+        if (html.getAttribute('data-theme') === 'dark') {
+            html.removeAttribute('data-theme');
+            btn.textContent = '🌙';
+        } else {
+            html.setAttribute('data-theme', 'dark');
+            btn.textContent = '☀️';
+        }
+        // チャートがあれば再描画して色を更新
+        if (chartInstance && currentData) {
+            analyzeAndDraw(currentData);
+        }
+    }
+
+    // === File Input Logic ===
     function updateFileName(input) {
         const display = document.getElementById('fileNameDisplay');
         if(input.files && input.files.length > 0) {
@@ -279,6 +295,7 @@
         }
     }
 
+    // === Data Processing ===
     function processData() {
         const fileInput = document.getElementById('csvFile');
         const textInput = document.getElementById('csvText');
@@ -288,6 +305,7 @@
                 header: true,
                 skipEmptyLines: true,
                 complete: function(results) {
+                    currentData = results.data;
                     analyzeAndDraw(results.data);
                 }
             });
@@ -297,15 +315,22 @@
                 header: true,
                 skipEmptyLines: true
             });
+            currentData = results.data;
             analyzeAndDraw(results.data);
         } 
         else {
-            alert("CSVファイルを選択するか、テキストを貼り付けてください");
+            alert("CSVファイルを選択するか、データを貼り付けてください");
         }
     }
 
     function analyzeAndDraw(data) {
-        // 1. データ加工
+        // CSS変数から色を取得（テーマ対応）
+        const style = getComputedStyle(document.body);
+        const gridColor = style.getPropertyValue('--chart-grid').trim();
+        const textColor = style.getPropertyValue('--chart-text').trim();
+        const primaryColor = style.getPropertyValue('--primary').trim();
+
+        // データ整形
         let cleanData = data
             .filter(row => row.conclusion === 'success')
             .map(row => ({
@@ -318,36 +343,31 @@
         cleanData.sort((a, b) => a.x - b.x);
 
         if (cleanData.length === 0) {
-            alert("有効なデータがありません（successの行が見つかりません）");
+            alert("No valid success data found.");
             return;
         }
 
-        // UI切り替え
+        // UI表示切り替え
         document.getElementById('emptyState').style.display = 'none';
         document.getElementById('resultsArea').style.display = 'block';
 
-        // 2. 外れ値処理 (IQR法)
+        // 外れ値処理 (IQR)
         const durations = cleanData.map(d => d.y).sort((a, b) => a - b);
         const q1 = durations[Math.floor((durations.length / 4))];
         const q3 = durations[Math.floor((durations.length * (3 / 4)))];
         const iqr = q3 - q1;
-        const upperBound = q3 + (3.0 * iqr); 
-
+        const upperBound = q3 + (3.0 * iqr);
         const filteredData = cleanData.filter(d => d.y > 0 && d.y <= upperBound);
-        
-        // 3. 統計計算
+
+        // 統計計算
         const recentData = filteredData.slice(-10);
         const allAvg = (filteredData.reduce((sum, r) => sum + r.y, 0) / filteredData.length).toFixed(1);
         const recentAvg = (recentData.reduce((sum, r) => sum + r.y, 0) / recentData.length).toFixed(1);
+        const diff = (recentAvg - allAvg).toFixed(1);
         
-        const diff = (recentAvg - allAvg).toFixed(1); // 最近 - 全体
-        const isImproved = diff < 0;
-        const diffAbs = Math.abs(diff);
-        
-        // 矢印と色クラスの決定
-        const trendHtml = diff == 0 ? `±0s` : 
-                          isImproved ? `<span class="trend-down">▼ ${diffAbs}s 改善</span>` : 
-                                       `<span class="trend-up">▲ ${diffAbs}s 悪化</span>`;
+        let trendHtml = `<span class="trend-val" style="color:var(--text-sub)">±0s</span>`;
+        if (diff < 0) trendHtml = `<span class="trend-val trend-good">▼ ${Math.abs(diff)}s improved</span>`;
+        if (diff > 0) trendHtml = `<span class="trend-val trend-bad">▲ ${Math.abs(diff)}s slower</span>`;
 
         document.getElementById('stats').innerHTML = `
             <div class="stat-card">
@@ -355,17 +375,17 @@
                 <div class="stat-value">${filteredData.length}</div>
             </div>
             <div class="stat-card">
-                <div class="stat-label">Average Time (All)</div>
-                <div class="stat-value">${allAvg}<span style="font-size:0.5em; color:#6b7280; margin-left:4px;">sec</span></div>
+                <div class="stat-label">Avg Duration (All)</div>
+                <div class="stat-value">${allAvg}<span style="font-size:0.5em; color:var(--text-sub); margin-left:4px;">sec</span></div>
             </div>
-            <div class="stat-card highlight-border">
-                <div class="stat-label">Last 10 Builds Avg</div>
-                <div class="stat-value">${recentAvg}<span class="stat-sub">${trendHtml}</span></div>
+            <div class="stat-card highlight">
+                <div class="stat-label">Last 10 Avg</div>
+                <div class="stat-value">${recentAvg}${trendHtml}</div>
             </div>
         `;
 
-        // 4. 移動平均
-        const windowSize = Math.max(3, Math.floor(filteredData.length * 0.1)); 
+        // 移動平均線
+        const windowSize = Math.max(3, Math.floor(filteredData.length * 0.1));
         const movingAverageData = filteredData.map((row, index, array) => {
             if (index < windowSize - 1) return null;
             const subset = array.slice(index - windowSize + 1, index + 1);
@@ -373,7 +393,7 @@
             return { x: row.x, y: avg };
         }).filter(r => r !== null);
 
-        // 5. チャート描画 (スタイリング強化)
+        // チャート描画
         const ctx = document.getElementById('myChart').getContext('2d');
         if (chartInstance) chartInstance.destroy();
 
@@ -382,22 +402,22 @@
                 datasets: [
                     {
                         type: 'scatter',
-                        label: 'Individual Run',
+                        label: 'Run',
                         data: filteredData,
-                        backgroundColor: 'rgba(37, 99, 235, 0.3)', // Modern Blue transparent
-                        borderColor: 'rgba(37, 99, 235, 0.5)',
+                        backgroundColor: primaryColor + '66', // add transparency
+                        borderColor: primaryColor,
                         borderWidth: 1,
                         pointRadius: 3,
                         pointHoverRadius: 6
                     },
                     {
                         type: 'line',
-                        label: `Trend (Mov. Avg ${windowSize})`,
+                        label: `Trend (${windowSize} avg)`,
                         data: movingAverageData,
-                        borderColor: '#10b981', // Success Green for trend
+                        borderColor: style.getPropertyValue('--accent-success').trim(),
                         borderWidth: 3,
                         pointRadius: 0,
-                        tension: 0.4, // Smooth curves
+                        tension: 0.4,
                         fill: false
                     }
                 ]
@@ -405,21 +425,17 @@
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                interaction: {
-                    mode: 'index',
-                    intersect: false,
-                },
                 plugins: {
                     legend: {
-                        position: 'top',
-                        labels: { usePointStyle: true, font: { family: "'Inter', sans-serif" } }
+                        labels: { color: textColor, font: { family: "'Inter', sans-serif" } }
                     },
                     tooltip: {
-                        backgroundColor: 'rgba(17, 24, 39, 0.9)',
-                        titleFont: { family: "'Inter', sans-serif", size: 13 },
-                        bodyFont: { family: "'JetBrains Mono', monospace" },
+                        backgroundColor: style.getPropertyValue('--card-bg').trim(),
+                        titleColor: textColor,
+                        bodyColor: textColor,
+                        borderColor: gridColor,
+                        borderWidth: 1,
                         padding: 10,
-                        cornerRadius: 8,
                         callbacks: {
                             label: function(context) {
                                 let label = context.dataset.label || '';
@@ -434,14 +450,14 @@
                     x: {
                         type: 'time',
                         time: { unit: 'day', displayFormats: { day: 'MM/dd' } },
-                        grid: { display: false }, // 縦グリッド消去ですっきり
-                        ticks: { font: { family: "'Inter', sans-serif" } }
+                        grid: { display: false },
+                        ticks: { color: textColor }
                     },
                     y: {
                         beginAtZero: true,
-                        title: { display: true, text: 'Duration (seconds)', font: {weight:'bold'} },
-                        grid: { color: '#f3f4f6' }, // 薄い横グリッド
-                        border: { display: false }
+                        title: { display: true, text: 'Seconds', color: textColor },
+                        grid: { color: gridColor },
+                        ticks: { color: textColor }
                     }
                 }
             }
