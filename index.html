@@ -1,627 +1,605 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GitHub Actions Speed Trends // ANALYZER</title>
-    
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;500;700&display=swap" rel="stylesheet">
-    
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <title>CI/CD Performance Analytics</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap">
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0">
     <style>
-        :root {
-            --bg-dark: #05070a;
-            --bg-gradient: radial-gradient(circle at 50% -20%, #1a2c4e, #05070a);
-            
-            --glass-bg: rgba(15, 23, 42, 0.6);
-            --glass-border: rgba(56, 189, 248, 0.15);
-            --glass-blur: blur(12px);
-            
-            --text-main: #e2e8f0;
-            --text-sub: #94a3b8;
-            
-            --primary: #00f2ff; /* Cyber Cyan */
-            --primary-glow: 0 0 15px rgba(0, 242, 255, 0.3);
-            --primary-hover: #60f7ff;
-            
-            --accent-success: #0affb0;
-            --accent-danger: #ff2a6d;
-            
-            --font-mono: 'JetBrains Mono', monospace;
-        }
-
         body {
-            font-family: var(--font-mono);
-            background: var(--bg-dark);
-            background-image: var(--bg-gradient);
-            color: var(--text-main);
-            margin: 0;
-            padding: 0;
-            min-height: 100vh;
-            overflow-x: hidden;
+            font-family: 'Inter', sans-serif;
         }
 
-        /* Background Particles Canvas */
-        #particle-canvas {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 0;
-            pointer-events: none; /* クリックを透過 */
-        }
-
-        .wrapper {
+        .chart-container {
             position: relative;
-            z-index: 1; /* Canvasの上に表示 */
-            max-width: 1100px;
-            margin: 0 auto;
-            padding: 40px 20px;
+            height: 300px;
+            width: 100%;
+            overflow: hidden;
         }
 
-        /* Header */
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-            margin-bottom: 40px;
-            border-bottom: 1px solid var(--glass-border);
-            padding-bottom: 20px;
-        }
-        .header-content h1 {
-            font-size: 1.6rem;
-            font-weight: 700;
-            margin: 0;
-            letter-spacing: -0.05em;
-            text-transform: uppercase;
-            text-shadow: var(--primary-glow);
-        }
-        .subtitle {
-            color: var(--primary);
-            font-size: 0.8rem;
-            margin-top: 5px;
-            opacity: 0.8;
-            letter-spacing: 0.1em;
+        .tooltip {
+            pointer-events: none;
+            transition: opacity 0.1s ease;
         }
 
-        /* Glass Card Style */
-        .card {
-            background: var(--glass-bg);
-            backdrop-filter: var(--glass-blur);
-            -webkit-backdrop-filter: var(--glass-blur);
-            border: 1px solid var(--glass-border);
-            border-radius: 16px;
-            padding: 24px;
-            margin-bottom: 24px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-            transition: transform 0.3s, box-shadow 0.3s, border-color 0.3s;
-        }
-        .card:hover {
-            border-color: rgba(0, 242, 255, 0.4);
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), var(--primary-glow);
-        }
-
-        /* Inputs Area */
-        .input-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 24px;
-        }
-        @media (max-width: 768px) { .input-grid { grid-template-columns: 1fr; } }
-
-        .input-group h3 {
-            font-size: 0.75rem;
-            color: var(--text-sub);
-            margin: 0 0 10px 0;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .input-group h3::before {
-            content: '';
-            display: block;
+        /* Custom Scrollbar for table */
+        .custom-scrollbar::-webkit-scrollbar {
             width: 6px;
             height: 6px;
-            background: var(--primary);
-            box-shadow: var(--primary-glow);
-            border-radius: 50%;
         }
 
-        /* File Upload Styling */
-        .file-upload-wrapper {
-            border: 1px dashed var(--glass-border);
-            border-radius: 12px;
-            background: rgba(0,0,0,0.2);
-            height: 120px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-            transition: all 0.3s;
-            cursor: pointer;
-            overflow: hidden;
-        }
-        .file-upload-wrapper:hover {
-            border-color: var(--primary);
-            background: rgba(0, 242, 255, 0.05);
-        }
-        .file-upload-wrapper input[type="file"] {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            opacity: 0;
-            cursor: pointer;
-        }
-        .upload-icon {
-            font-size: 24px;
-            margin-bottom: 8px;
-            filter: drop-shadow(0 0 5px var(--primary));
-        }
-        .upload-text {
-            font-size: 0.85rem;
-            color: var(--text-main);
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
         }
 
-        /* Textarea */
-        textarea {
-            width: 100%;
-            height: 120px;
-            box-sizing: border-box;
-            border-radius: 12px;
-            border: 1px solid var(--glass-border);
-            padding: 12px;
-            font-family: var(--font-mono);
-            font-size: 12px;
-            background: rgba(0,0,0,0.2);
-            color: var(--primary);
-            resize: vertical;
-            outline: none;
-            transition: border-color 0.3s;
-        }
-        textarea:focus {
-            border-color: var(--primary);
-            background: rgba(0, 242, 255, 0.02);
-        }
-        textarea::placeholder { color: rgba(255,255,255,0.2); }
-
-        /* Cyber Button */
-        .action-btn {
-            display: block;
-            width: 100%;
-            margin-top: 20px;
-            background: rgba(0, 242, 255, 0.1);
-            color: var(--primary);
-            border: 1px solid var(--primary);
-            padding: 14px;
-            border-radius: 8px;
-            font-family: var(--font-mono);
-            font-weight: 700;
-            letter-spacing: 0.1em;
-            text-transform: uppercase;
-            cursor: pointer;
-            transition: all 0.3s;
-            position: relative;
-            overflow: hidden;
-        }
-        .action-btn:hover {
-            background: var(--primary);
-            color: #000;
-            box-shadow: 0 0 20px var(--primary);
-        }
-        
-        /* Stats Grid */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-        }
-        .stat-card {
-            background: rgba(255,255,255,0.03);
-            border: 1px solid var(--glass-border);
-            padding: 20px;
-            border-radius: 12px;
-            position: relative;
-            overflow: hidden;
-        }
-        .stat-card::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; width: 4px; height: 100%;
-            background: var(--glass-border);
-        }
-        .stat-card.highlight::before {
-            background: var(--primary);
-            box-shadow: 0 0 10px var(--primary);
-        }
-        .stat-label {
-            font-size: 0.7rem;
-            color: var(--text-sub);
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-        }
-        .stat-value {
-            font-size: 2rem;
-            font-weight: 300;
-            margin-top: 5px;
-            color: var(--text-main);
-            text-shadow: 0 0 10px rgba(255,255,255,0.1);
-        }
-        .trend-val { font-size: 0.9rem; margin-left: 8px; font-weight: 500; }
-        .trend-good { color: var(--accent-success); text-shadow: 0 0 10px rgba(10, 255, 176, 0.4); }
-        .trend-bad { color: var(--accent-danger); text-shadow: 0 0 10px rgba(255, 42, 109, 0.4); }
-
-        /* Chart Area */
-        .chart-container { position: relative; height: 450px; width: 100%; }
-        .empty-state {
-            text-align: center;
-            color: var(--text-sub);
-            padding: 60px;
-            font-size: 0.9rem;
-            border: 1px dashed var(--glass-border);
-            background: transparent;
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
         }
 
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
-<body>
 
-<canvas id="particle-canvas"></canvas>
+<body class="bg-slate-50 text-slate-800 h-screen flex flex-col overflow-hidden">
 
-<div class="wrapper">
-    <header>
-        <div class="header-content">
-            <h1>GitHub Actions<br><span style="color:var(--primary)">Speed Trends</span></h1>
-            <div class="subtitle">CI/CD PERFORMANCE VISUALIZER</div>
+    <!-- Navigation Bar -->
+    <nav class="bg-white border-b border-slate-200 h-16 flex-none px-6 flex items-center justify-between z-10">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white">
+                <span class="material-symbols-outlined text-xl">analytics</span>
+            </div>
+            <h1 class="text-lg font-bold text-slate-800 tracking-tight">Pipeline Insights</h1>
         </div>
-        <div style="font-size: 0.7rem; color: var(--text-sub); border: 1px solid var(--glass-border); padding: 5px 10px; border-radius: 20px;">
-            ● SYSTEM ONLINE
+        <div class="flex items-center gap-4">
+            <button
+                class="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-md transition-colors">
+                <span class="material-symbols-outlined text-[18px]">help</span>
+                <span>ヘルプ</span>
+            </button>
+            <div
+                class="h-8 w-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 font-medium text-sm cursor-pointer">
+                MJ
+            </div>
         </div>
-    </header>
-    
-    <div class="card">
-        <div class="input-grid">
-            <div class="input-group">
-                <h3>> Source Input (CSV)</h3>
-                <div class="file-upload-wrapper">
-                    <input type="file" id="csvFile" accept=".csv" onchange="updateFileName(this)">
-                    <div class="upload-content">
-                        <div class="upload-icon">📂</div>
-                        <div class="upload-text">DRAG & DROP CSV FILE</div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="flex-1 flex overflow-hidden">
+
+        <!-- Sidebar (Visual only) -->
+        <aside class="w-64 bg-white border-r border-slate-200 flex-none hidden md:flex flex-col py-4">
+            <div class="px-4 mb-6">
+                <button id="import-btn"
+                    class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors shadow-sm group">
+                    <span class="material-symbols-outlined group-hover:animate-bounce">upload_file</span>
+                    CSVインポート
+                </button>
+                <input type="file" id="csv-input" accept=".csv" class="hidden">
+            </div>
+            <nav class="space-y-1 px-2 text-sm font-medium">
+                <a href="#" class="flex items-center gap-3 px-3 py-2 text-indigo-600 bg-indigo-50 rounded-md">
+                    <span class="material-symbols-outlined">monitoring</span>
+                    ダッシュボード
+                </a>
+                <a href="#" class="flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-50 rounded-md">
+                    <span class="material-symbols-outlined">history</span>
+                    実行履歴
+                </a>
+                <a href="#" class="flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-50 rounded-md">
+                    <span class="material-symbols-outlined">settings</span>
+                    設定
+                </a>
+            </nav>
+
+            <div class="mt-auto px-4 pb-4">
+                <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                    <p class="text-xs font-semibold text-slate-500 uppercase mb-2">データソース</p>
+                    <div class="flex items-center gap-2 text-sm text-slate-700 truncate">
+                        <span class="material-symbols-outlined text-slate-400 text-base">description</span>
+                        <span class="truncate" id="filename-display">No File Selected</span>
+                    </div>
+                    <div class="mt-2 text-xs text-slate-400 flex items-center gap-1">
+                        <span class="w-2 h-2 rounded-full bg-slate-300" id="status-dot"></span>
+                        <span id="status-text">待機中</span>
                     </div>
                 </div>
-                <div id="fileNameDisplay" style="margin-top:8px; font-size:0.75em; color:var(--primary); text-align:center; min-height:1em;"></div>
+            </div>
+        </aside>
+
+        <!-- Dashboard Area -->
+        <main class="flex-1 overflow-y-auto custom-scrollbar p-6 lg:p-8">
+
+            <!-- Header Section -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-900" id="project-title">Project Analytics</h2>
+                    <p class="text-sm text-slate-500 mt-1">実行パフォーマンスと傾向分析</p>
+                </div>
+                <div class="flex items-center bg-white rounded-lg shadow-sm border border-slate-200 p-1">
+                    <button data-range="24h"
+                        class="time-range-btn px-3 py-1 text-sm font-medium text-indigo-600 bg-indigo-50 rounded shadow-sm transition-colors">24時間</button>
+                    <button data-range="7d"
+                        class="time-range-btn px-3 py-1 text-sm font-medium text-slate-600 hover:text-slate-900 rounded hover:bg-slate-50 transition-colors">7日間</button>
+                    <button data-range="30d"
+                        class="time-range-btn px-3 py-1 text-sm font-medium text-slate-600 hover:text-slate-900 rounded hover:bg-slate-50 transition-colors">30日間</button>
+                    <button data-range="all"
+                        class="time-range-btn px-3 py-1 text-sm font-medium text-slate-600 hover:text-slate-900 rounded hover:bg-slate-50 transition-colors">全期間</button>
+                </div>
             </div>
 
-            <div class="input-group">
-                <h3>> Raw Data Paste</h3>
-                <textarea id="csvText" placeholder="run_number,created_at,duration_sec..."></textarea>
+            <!-- KPI Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <!-- Card 1 -->
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 relative overflow-hidden group">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">平均実行時間</p>
+                            <h3 class="text-2xl font-bold text-slate-900 mt-1" id="kpi-avg-duration">-</h3>
+                        </div>
+                        <div class="p-2 bg-blue-50 rounded-lg text-blue-600">
+                            <span class="material-symbols-outlined">timer</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center text-xs font-medium text-slate-500" id="kpi-avg-trend">
+                        <span>-</span>
+                    </div>
+                </div>
+
+                <!-- Card 2 -->
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 relative overflow-hidden">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">成功率</p>
+                            <h3 class="text-2xl font-bold text-slate-900 mt-1" id="kpi-success-rate">-</h3>
+                        </div>
+                        <div class="p-2 bg-emerald-50 rounded-lg text-emerald-600">
+                            <span class="material-symbols-outlined">check_circle</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center text-xs font-medium text-slate-500">
+                        <span id="kpi-success-count">-</span>
+                    </div>
+                </div>
+
+                <!-- Card 3 -->
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 relative overflow-hidden">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">合計実行回数</p>
+                            <h3 class="text-2xl font-bold text-slate-900 mt-1" id="kpi-total-runs">-</h3>
+                        </div>
+                        <div class="p-2 bg-violet-50 rounded-lg text-violet-600">
+                            <span class="material-symbols-outlined">repeat</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center text-xs font-medium text-slate-500">
+                        <span id="kpi-frequency">-</span>
+                    </div>
+                </div>
+
+                <!-- Card 4 -->
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 relative overflow-hidden">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">最新ステータス</p>
+                            <h3 class="text-xl font-bold mt-1 text-slate-400" id="kpi-latest-status">-</h3>
+                        </div>
+                        <div class="p-2 bg-orange-50 rounded-lg text-orange-600">
+                            <span class="material-symbols-outlined">update</span>
+                        </div>
+                    </div>
+                    <div class="text-xs text-slate-400" id="kpi-latest-time">-</div>
+                </div>
             </div>
-        </div>
-        <button class="action-btn" onclick="processData()">Initialize Analysis ⚡</button>
+
+            <!-- Main Chart Section -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-8">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-lg font-bold text-slate-800">実行時間の推移 (Duration Trend)</h3>
+                    <div class="flex items-center gap-2">
+                        <span class="flex items-center gap-1 text-xs text-slate-500"><span
+                                class="w-2 h-2 rounded-full bg-emerald-500"></span>Success</span>
+                        <span class="flex items-center gap-1 text-xs text-slate-500"><span
+                                class="w-2 h-2 rounded-full bg-rose-500"></span>Failure</span>
+                    </div>
+                </div>
+
+                <!-- Interactive SVG Chart -->
+                <div class="chart-container group" id="trend-chart">
+                    <!-- Tooltip Element (Hidden by default) -->
+                    <div id="chart-tooltip"
+                        class="tooltip absolute opacity-0 bg-slate-800 text-white text-xs rounded py-1 px-2 z-20 shadow-lg transform -translate-x-1/2 -translate-y-full mt-[-8px] pointer-events-none whitespace-nowrap">
+                        <p class="font-bold"><span id="tt-run"></span></p>
+                        <p>Duration: <span id="tt-dur" class="font-mono text-blue-300"></span></p>
+                        <p>Status: <span id="tt-status"></span></p>
+                    </div>
+                    <svg width="100%" height="100%" class="overflow-visible" id="chart-svg">
+                        <!-- SVG Content will be injected here -->
+                    </svg>
+                    <div id="chart-empty-state"
+                        class="absolute inset-0 flex items-center justify-center text-slate-400 text-sm">
+                        データがありません
+                    </div>
+                </div>
+            </div>
+
+            <!-- Data Table Section -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                    <h3 class="text-sm font-bold text-slate-700 uppercase tracking-wide">詳細ログ</h3>
+                    <button class="text-xs text-indigo-600 font-medium hover:underline flex items-center gap-1">
+                        全データをダウンロード
+                        <span class="material-symbols-outlined text-sm">download</span>
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left">
+                        <thead class="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-200">
+                            <tr>
+                                <th class="px-6 py-3 font-medium">Run #</th>
+                                <th class="px-6 py-3 font-medium">Status</th>
+                                <th class="px-6 py-3 font-medium">Duration (sec)</th>
+                                <th class="px-6 py-3 font-medium">Started At</th>
+                                <th class="px-6 py-3 font-medium text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100" id="table-body">
+                            <!-- Table rows will be injected here -->
+                        </tbody>
+                    </table>
+                    <div id="table-empty-state" class="p-8 text-center text-slate-400 text-sm hidden">
+                        表示するデータがありません
+                    </div>
+                </div>
+            </div>
+
+        </main>
     </div>
 
-    <div id="resultsArea" style="display:none;">
-        <div class="stats-grid" id="stats"></div>
-        
-        <div class="card" style="margin-top: 24px;">
-            <div class="chart-container">
-                <canvas id="myChart"></canvas>
-            </div>
-        </div>
-    </div>
-    
-    <div id="emptyState" class="card empty-state">
-        <p>>> WAITING FOR DATA INPUT...</p>
-    </div>
-</div>
+    <script>
+        // Global State
+        let rawData = [];
+        let filteredData = [];
+        let currentRange = '24h';
 
-<script>
-    // === PARTICLE ANIMATION SYSTEM ===
-    const canvas = document.getElementById('particle-canvas');
-    const ctx = canvas.getContext('2d');
-    let particlesArray;
-
-    // Canvasサイズ調整
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-
-    // マウスインタラクション
-    let mouse = { x: null, y: null, radius: 150 };
-
-    window.addEventListener('mousemove', function(event) {
-        mouse.x = event.x;
-        mouse.y = event.y;
-    });
-
-    class Particle {
-        constructor(x, y, directionX, directionY, size, color) {
-            this.x = x;
-            this.y = y;
-            this.directionX = directionX;
-            this.directionY = directionY;
-            this.size = size;
-            this.color = color;
-        }
-        draw() {
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2, false);
-            ctx.fillStyle = '#00f2ff'; // Cyan dot
-            ctx.fill();
-        }
-        update() {
-            // 画面端で跳ね返る
-            if (this.x > canvas.width || this.x < 0) this.directionX = -this.directionX;
-            if (this.y > canvas.height || this.y < 0) this.directionY = -this.directionY;
-
-            // マウスとのインタラクション（避ける動きはせず、近くで線を繋ぐため位置更新のみ）
-            // ※インタラクティブにするならここにマウス反発処理を入れる
-            
-            this.x += this.directionX;
-            this.y += this.directionY;
-            this.draw();
-        }
-    }
-
-    function initParticles() {
-        particlesArray = [];
-        // パーティクル数（画面サイズに応じて調整）
-        let numberOfParticles = (canvas.height * canvas.width) / 9000;
-        for (let i = 0; i < numberOfParticles; i++) {
-            let size = (Math.random() * 2) + 1;
-            let x = (Math.random() * ((innerWidth - size * 2) - (size * 2)) + size * 2);
-            let y = (Math.random() * ((innerHeight - size * 2) - (size * 2)) + size * 2);
-            let directionX = (Math.random() * 0.4) - 0.2;
-            let directionY = (Math.random() * 0.4) - 0.2;
-            let color = '#00f2ff';
-
-            particlesArray.push(new Particle(x, y, directionX, directionY, size, color));
-        }
-    }
-
-    function connect() {
-        let opacityValue = 1;
-        for (let a = 0; a < particlesArray.length; a++) {
-            for (let b = a; b < particlesArray.length; b++) {
-                let distance = ((particlesArray[a].x - particlesArray[b].x) * (particlesArray[a].x - particlesArray[b].x))
-                             + ((particlesArray[a].y - particlesArray[b].y) * (particlesArray[a].y - particlesArray[b].y));
-                
-                // 粒子同士が近いとき線を引く
-                if (distance < (canvas.width/7) * (canvas.height/7)) {
-                    opacityValue = 1 - (distance / 20000);
-                    ctx.strokeStyle = 'rgba(0, 242, 255,' + (opacityValue * 0.15) + ')'; // 薄いシアン
-                    ctx.lineWidth = 1;
-                    ctx.beginPath();
-                    ctx.moveTo(particlesArray[a].x, particlesArray[a].y);
-                    ctx.lineTo(particlesArray[b].x, particlesArray[b].y);
-                    ctx.stroke();
-                }
-            }
-            
-            // マウスと粒子の線
-            let mouseDistance = ((particlesArray[a].x - mouse.x)**2 + (particlesArray[a].y - mouse.y)**2);
-            if (mouseDistance < 20000) {
-                ctx.strokeStyle = 'rgba(0, 242, 255, 0.3)';
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.moveTo(particlesArray[a].x, particlesArray[a].y);
-                ctx.lineTo(mouse.x, mouse.y);
-                ctx.stroke();
-            }
-        }
-    }
-
-    function animate() {
-        requestAnimationFrame(animate);
-        ctx.clearRect(0, 0, innerWidth, innerHeight);
-        for (let i = 0; i < particlesArray.length; i++) {
-            particlesArray[i].update();
-        }
-        connect();
-    }
-
-    window.addEventListener('resize', function() {
-        canvas.width = innerWidth;
-        canvas.height = innerHeight;
-        initParticles();
-    });
-
-    // Start Animation
-    initParticles();
-    animate();
-
-
-    // === CORE LOGIC (SAME AS BEFORE) ===
-    let chartInstance = null;
-
-    function updateFileName(input) {
-        const display = document.getElementById('fileNameDisplay');
-        if(input.files && input.files.length > 0) {
-            display.textContent = ">> FILE LOADED: " + input.files[0].name;
-        } else {
-            display.textContent = "";
-        }
-    }
-
-    function processData() {
-        const fileInput = document.getElementById('csvFile');
-        const textInput = document.getElementById('csvText');
-
-        if (fileInput.files.length > 0) {
-            Papa.parse(fileInput.files[0], {
-                header: true,
-                skipEmptyLines: true,
-                complete: function(results) { analyzeAndDraw(results.data); }
-            });
-        } else if (textInput.value.trim() !== "") {
-            const results = Papa.parse(textInput.value.trim(), {
-                header: true,
-                skipEmptyLines: true
-            });
-            analyzeAndDraw(results.data);
-        } else {
-            alert(">> ERROR: NO INPUT DATA DETECTED");
-        }
-    }
-
-    function analyzeAndDraw(data) {
-        const cleanData = data
-            .filter(row => row.conclusion === 'success')
-            .map(row => ({
-                x: new Date(row.created_at),
-                y: parseFloat(row.duration_sec)
-            }))
-            .filter(row => !isNaN(row.y) && !isNaN(row.x.getTime()))
-            .sort((a, b) => a.x - b.x);
-
-        if (cleanData.length === 0) {
-            alert(">> ERROR: NO VALID SUCCESS DATA FOUND");
-            return;
-        }
-
-        document.getElementById('emptyState').style.display = 'none';
-        const resultsArea = document.getElementById('resultsArea');
-        resultsArea.style.display = 'block';
-        // 少しフェードイン
-        resultsArea.style.opacity = 0;
-        setTimeout(() => { 
-            resultsArea.style.transition = 'opacity 0.5s'; 
-            resultsArea.style.opacity = 1; 
-        }, 10);
-
-        // 外れ値処理
-        const durations = cleanData.map(d => d.y).sort((a, b) => a - b);
-        const q1 = durations[Math.floor((durations.length / 4))];
-        const q3 = durations[Math.floor((durations.length * (3 / 4)))];
-        const iqr = q3 - q1;
-        const upperBound = q3 + (3.0 * iqr);
-        const filteredData = cleanData.filter(d => d.y > 0 && d.y <= upperBound);
-
-        // 統計
-        const recentData = filteredData.slice(-10);
-        const allAvg = (filteredData.reduce((sum, r) => sum + r.y, 0) / filteredData.length).toFixed(1);
-        const recentAvg = (recentData.reduce((sum, r) => sum + r.y, 0) / recentData.length).toFixed(1);
-        const diff = (recentAvg - allAvg).toFixed(1);
-        
-        let trendHtml = `<span class="trend-val" style="color:var(--text-sub)">±0s</span>`;
-        if (diff < 0) trendHtml = `<span class="trend-val trend-good">▼ ${Math.abs(diff)}s FASTER</span>`;
-        if (diff > 0) trendHtml = `<span class="trend-val trend-bad">▲ ${Math.abs(diff)}s SLOWER</span>`;
-
-        document.getElementById('stats').innerHTML = `
-            <div class="stat-card">
-                <div class="stat-label">Total Builds</div>
-                <div class="stat-value">${filteredData.length}</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Avg Duration (All)</div>
-                <div class="stat-value">${allAvg}<span style="font-size:0.5em; color:var(--primary); margin-left:4px;">SEC</span></div>
-            </div>
-            <div class="stat-card highlight">
-                <div class="stat-label">Last 10 Avg</div>
-                <div class="stat-value">${recentAvg}${trendHtml}</div>
-            </div>
-        `;
-
-        // 移動平均
-        const windowSize = Math.max(3, Math.floor(filteredData.length * 0.1));
-        const movingAverageData = filteredData.map((row, index, array) => {
-            if (index < windowSize - 1) return null;
-            const subset = array.slice(index - windowSize + 1, index + 1);
-            const avg = subset.reduce((sum, r) => sum + r.y, 0) / windowSize;
-            return { x: row.x, y: avg };
-        }).filter(r => r !== null);
-
-        // チャート描画
-        const ctxChart = document.getElementById('myChart').getContext('2d');
-        if (chartInstance) chartInstance.destroy();
-
-        // チャート用のグラデーション作成
-        const gradient = ctxChart.createLinearGradient(0, 0, 0, 400);
-        gradient.addColorStop(0, 'rgba(0, 242, 255, 0.4)');
-        gradient.addColorStop(1, 'rgba(0, 242, 255, 0.0)');
-
-        chartInstance = new Chart(ctxChart, {
-            data: {
-                datasets: [
-                    {
-                        type: 'scatter',
-                        label: 'RAW DATA',
-                        data: filteredData,
-                        backgroundColor: 'rgba(255, 255, 255, 0.3)',
-                        borderColor: 'rgba(255, 255, 255, 0.5)',
-                        borderWidth: 1,
-                        pointRadius: 2,
-                        pointHoverRadius: 5,
-                        pointHoverBackgroundColor: '#fff'
-                    },
-                    {
-                        type: 'line',
-                        label: `TREND (${windowSize} RUN AVG)`,
-                        data: movingAverageData,
-                        borderColor: '#00f2ff',
-                        backgroundColor: gradient,
-                        borderWidth: 2,
-                        pointRadius: 0,
-                        tension: 0.4,
-                        fill: true, // グラデーションで塗りつぶし
-                    }
-                ]
+        const App = {
+            init() {
+                this.setupEventListeners();
+                this.renderEmptyState();
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                interaction: {
-                    mode: 'index',
-                    intersect: false,
-                },
-                plugins: {
-                    legend: {
-                        labels: { color: '#94a3b8', font: { family: "'JetBrains Mono', monospace", size: 10 } }
+
+            setupEventListeners() {
+                // CSV Import Button
+                document.getElementById('import-btn').addEventListener('click', () => {
+                    document.getElementById('csv-input').click();
+                });
+
+                // File Input Change
+                document.getElementById('csv-input').addEventListener('change', (e) => {
+                    this.handleFileUpload(e.target.files[0]);
+                });
+
+                // Time Range Buttons
+                document.querySelectorAll('.time-range-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        // Update active class
+                        document.querySelectorAll('.time-range-btn').forEach(b => {
+                            b.classList.remove('bg-indigo-50', 'text-indigo-600', 'shadow-sm');
+                            b.classList.add('text-slate-600', 'hover:bg-slate-50', 'hover:text-slate-900');
+                        });
+                        e.target.classList.remove('text-slate-600', 'hover:bg-slate-50', 'hover:text-slate-900');
+                        e.target.classList.add('bg-indigo-50', 'text-indigo-600', 'shadow-sm');
+
+                        currentRange = e.target.dataset.range;
+                        this.filterData(currentRange);
+                    });
+                });
+            },
+
+            handleFileUpload(file) {
+                if (!file) return;
+
+                // Update UI
+                document.getElementById('filename-display').textContent = file.name;
+                document.getElementById('status-dot').className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
+                document.getElementById('status-text').textContent = "解析中...";
+
+                Papa.parse(file, {
+                    header: true,
+                    skipEmptyLines: true,
+                    complete: (results) => {
+                        this.processData(results.data);
+                        document.getElementById('status-dot').className = "w-2 h-2 rounded-full bg-emerald-500";
+                        document.getElementById('status-text').textContent = "完了";
+                        document.getElementById('project-title').textContent = file.name.replace('.csv', '');
                     },
-                    tooltip: {
-                        backgroundColor: 'rgba(5, 7, 10, 0.9)',
-                        titleColor: '#00f2ff',
-                        bodyColor: '#e2e8f0',
-                        borderColor: 'rgba(56, 189, 248, 0.3)',
-                        borderWidth: 1,
-                        padding: 12,
-                        titleFont: { family: "'JetBrains Mono', monospace" },
-                        bodyFont: { family: "'JetBrains Mono', monospace" },
-                        displayColors: false,
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.dataset.label || '';
-                                if (label) label += ': ';
-                                if (context.parsed.y !== null) label += context.parsed.y.toFixed(1) + 's';
-                                return label;
-                            }
-                        }
+                    error: (err) => {
+                        console.error(err);
+                        alert("CSVの読み込みに失敗しました");
+                        document.getElementById('status-dot').className = "w-2 h-2 rounded-full bg-rose-500";
+                        document.getElementById('status-text').textContent = "エラー";
                     }
-                },
-                scales: {
-                    x: {
-                        type: 'time',
-                        time: { unit: 'day', displayFormats: { day: 'MM/dd' } },
-                        grid: { color: 'rgba(255,255,255,0.05)' },
-                        ticks: { color: '#64748b', font: { size: 10 } }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        grid: { color: 'rgba(255,255,255,0.05)' },
-                        ticks: { color: '#64748b', font: { size: 10 } }
-                    }
+                });
+            },
+
+            processData(data) {
+                // Transform and sort
+                rawData = data.map(row => ({
+                    run_number: parseInt(row.run_number),
+                    created_at: row.created_at,
+                    timestamp: new Date(row.created_at).getTime(),
+                    conclusion: row.conclusion,
+                    duration_sec: parseFloat(row.duration_sec),
+                    html_url: row.html_url || '#'
+                }))
+                    .filter(d => !isNaN(d.duration_sec) && !isNaN(d.timestamp))
+                    .sort((a, b) => b.timestamp - a.timestamp); // Newest first
+
+                if (rawData.length === 0) {
+                    alert("有効なデータが見つかりませんでした");
+                    return;
                 }
+
+                this.filterData(currentRange);
+            },
+
+            filterData(range) {
+                if (rawData.length === 0) return;
+
+                // Filter relative to the LATEST data point, not "now", to support old CSVs
+                const latestTime = rawData[0].timestamp;
+                let startTime;
+
+                if (range === '24h') startTime = latestTime - 24 * 60 * 60 * 1000;
+                else if (range === '7d') startTime = latestTime - 7 * 24 * 60 * 60 * 1000;
+                else if (range === '30d') startTime = latestTime - 30 * 24 * 60 * 60 * 1000;
+                else startTime = 0; // All time
+
+                filteredData = rawData.filter(d => d.timestamp >= startTime);
+
+                // Sort for chart (Oldest -> Newest)
+                // But rawData is Newest -> Oldest.
+                // We'll handle sorting in render functions as needed.
+
+                this.renderAll();
+            },
+
+            renderAll() {
+                document.getElementById('chart-empty-state').classList.add('hidden');
+                document.getElementById('table-empty-state').classList.add('hidden');
+
+                this.renderKPIs();
+                this.renderChart();
+                this.renderTable();
+            },
+
+            renderEmptyState() {
+                document.getElementById('kpi-avg-duration').textContent = '-';
+                document.getElementById('kpi-success-rate').textContent = '-';
+                document.getElementById('kpi-total-runs').textContent = '-';
+                document.getElementById('kpi-latest-status').textContent = '-';
+                document.getElementById('chart-empty-state').classList.remove('hidden');
+                document.getElementById('table-empty-state').classList.remove('hidden');
+            },
+
+            formatDate(dateStr) {
+                const d = new Date(dateStr);
+                return d.toLocaleString('ja-JP', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+            },
+
+            renderKPIs() {
+                if (filteredData.length === 0) {
+                    this.renderEmptyState();
+                    return;
+                }
+
+                const totalRuns = filteredData.length;
+                const successRuns = filteredData.filter(d => d.conclusion === 'success').length;
+                const successRate = ((successRuns / totalRuns) * 100).toFixed(1);
+                const avgDuration = (filteredData.reduce((acc, curr) => acc + curr.duration_sec, 0) / totalRuns).toFixed(1);
+                const latest = filteredData[0]; // filteredData is subset of rawData (Newest first)
+
+                document.getElementById('kpi-avg-duration').textContent = `${avgDuration}s`;
+                document.getElementById('kpi-success-rate').textContent = `${successRate}%`;
+                document.getElementById('kpi-total-runs').textContent = totalRuns;
+                document.getElementById('kpi-success-count').textContent = `成功: ${successRuns} / 失敗: ${totalRuns - successRuns}`;
+                document.getElementById('kpi-frequency').textContent = `期間: ${currentRange}`;
+
+                const latestEl = document.getElementById('kpi-latest-status');
+                latestEl.textContent = latest.conclusion === 'success' ? '成功' : '失敗';
+                latestEl.className = `text-xl font-bold mt-1 ${latest.conclusion === 'success' ? 'text-emerald-600' : 'text-rose-600'}`;
+
+                document.getElementById('kpi-latest-time').textContent = this.formatDate(latest.created_at);
+            },
+
+            renderChart() {
+                const svg = document.getElementById('chart-svg');
+                const container = document.getElementById('trend-chart');
+                const tooltip = document.getElementById('chart-tooltip');
+
+                svg.innerHTML = '';
+
+                if (filteredData.length === 0) return;
+
+                const width = container.clientWidth;
+                const height = container.clientHeight;
+                const padding = { top: 20, right: 20, bottom: 30, left: 40 };
+
+                // Chart needs Oldest -> Newest
+                const chartData = [...filteredData].reverse();
+
+                const maxDur = Math.max(...chartData.map(d => d.duration_sec)) * 1.2;
+
+                const xScale = (index) => padding.left + (index / (chartData.length - 1 || 1)) * (width - padding.left - padding.right);
+                const yScale = (val) => height - padding.bottom - (val / maxDur) * (height - padding.top - padding.bottom);
+
+                // 1. Grid Lines
+                const gridCount = 5;
+                for (let i = 0; i <= gridCount; i++) {
+                    const val = (maxDur / gridCount) * i;
+                    const y = yScale(val);
+
+                    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                    line.setAttribute("x1", padding.left);
+                    line.setAttribute("y1", y);
+                    line.setAttribute("x2", width - padding.right);
+                    line.setAttribute("y2", y);
+                    line.setAttribute("stroke", "#f1f5f9");
+                    line.setAttribute("stroke-width", "1");
+                    svg.appendChild(line);
+
+                    const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                    text.setAttribute("x", padding.left - 10);
+                    text.setAttribute("y", y + 4);
+                    text.setAttribute("text-anchor", "end");
+                    text.setAttribute("fill", "#94a3b8");
+                    text.setAttribute("font-size", "10");
+                    text.textContent = Math.round(val) + 's';
+                    svg.appendChild(text);
+                }
+
+                // 2. Trend Line
+                if (chartData.length > 1) {
+                    const points = chartData.map((d, i) => `${xScale(i)},${yScale(d.duration_sec)}`).join(" ");
+                    const polyline = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+                    polyline.setAttribute("points", points);
+                    polyline.setAttribute("fill", "none");
+                    polyline.setAttribute("stroke", "#6366f1");
+                    polyline.setAttribute("stroke-width", "2");
+                    polyline.setAttribute("stroke-linejoin", "round");
+                    polyline.setAttribute("stroke-linecap", "round");
+                    polyline.innerHTML = `<animate attributeName="stroke-dasharray" from="0, 10000" to="10000, 0" duration="1.5s" />`;
+                    svg.appendChild(polyline);
+
+                    // Area
+                    const areaPathStr = `${padding.left},${height - padding.bottom} ` + points + ` ${width - padding.right},${height - padding.bottom}`;
+                    const area = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+                    area.setAttribute("points", areaPathStr);
+                    area.setAttribute("fill", "rgba(99, 102, 241, 0.1)");
+                    svg.appendChild(area);
+                }
+
+                // 3. Data Points
+                chartData.forEach((d, i) => {
+                    const x = xScale(i);
+                    const y = yScale(d.duration_sec);
+                    const color = d.conclusion === 'success' ? '#10b981' : '#f43f5e';
+
+                    const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                    circle.setAttribute("cx", x);
+                    circle.setAttribute("cy", y);
+                    circle.setAttribute("r", "4");
+                    circle.setAttribute("fill", "white");
+                    circle.setAttribute("stroke", color);
+                    circle.setAttribute("stroke-width", "2");
+                    circle.classList.add("transition-all", "duration-200", "ease-in-out");
+                    svg.appendChild(circle);
+
+                    // Hit Area
+                    const hitArea = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                    hitArea.setAttribute("x", x - 10);
+                    hitArea.setAttribute("y", 0);
+                    hitArea.setAttribute("width", 20);
+                    hitArea.setAttribute("height", height);
+                    hitArea.setAttribute("fill", "transparent");
+                    hitArea.style.cursor = "pointer";
+
+                    hitArea.addEventListener('mouseenter', () => {
+                        circle.setAttribute("r", "6");
+                        circle.setAttribute("fill", color);
+
+                        tooltip.style.opacity = "1";
+                        tooltip.style.left = `${x}px`;
+                        tooltip.style.top = `${y}px`;
+
+                        document.getElementById('tt-run').textContent = `Run #${d.run_number}`;
+                        document.getElementById('tt-dur').textContent = `${d.duration_sec}s`;
+                        document.getElementById('tt-status').textContent = d.conclusion;
+                        document.getElementById('tt-status').className = d.conclusion === 'success' ? 'text-emerald-300' : 'text-rose-300 font-bold';
+                    });
+
+                    hitArea.addEventListener('mouseleave', () => {
+                        circle.setAttribute("r", "4");
+                        circle.setAttribute("fill", "white");
+                        tooltip.style.opacity = "0";
+                    });
+
+                    svg.appendChild(hitArea);
+                });
+            },
+
+            renderTable() {
+                const tbody = document.getElementById('table-body');
+                tbody.innerHTML = '';
+
+                if (filteredData.length === 0) {
+                    document.getElementById('table-empty-state').classList.remove('hidden');
+                    return;
+                }
+
+                // Table shows Newest -> Oldest (filteredData is already sorted this way)
+                // Limit to 50 rows for performance
+                const tableData = filteredData.slice(0, 50);
+
+                tableData.forEach(d => {
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-slate-50 transition-colors group";
+
+                    const statusColor = d.conclusion === 'success'
+                        ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                        : 'bg-rose-100 text-rose-700 border-rose-200';
+
+                    const icon = d.conclusion === 'success' ? 'check' : 'close';
+
+                    // Calculate bar width relative to max duration in this set
+                    const maxDur = Math.max(...tableData.map(x => x.duration_sec)) || 1;
+                    const barWidth = (d.duration_sec / maxDur) * 100;
+
+                    tr.innerHTML = `
+                        <td class="px-6 py-4 font-mono text-slate-600">#${d.run_number}</td>
+                        <td class="px-6 py-4">
+                            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border ${statusColor}">
+                                <span class="material-symbols-outlined text-[14px] font-bold">${icon}</span>
+                                ${d.conclusion}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex items-center gap-2">
+                                <span class="font-medium text-slate-700">${d.duration_sec}s</span>
+                                <div class="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                    <div class="h-full ${d.conclusion === 'success' ? 'bg-indigo-500' : 'bg-rose-500'}" style="width: ${barWidth}%"></div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 text-slate-500">${this.formatDate(d.created_at)}</td>
+                        <td class="px-6 py-4 text-right">
+                            <a href="${d.html_url}" target="_blank" class="text-slate-400 hover:text-indigo-600 transition-colors p-1 rounded hover:bg-indigo-50 inline-block">
+                                <span class="material-symbols-outlined">open_in_new</span>
+                            </a>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
             }
+        };
+
+        // Start the app
+        document.addEventListener('DOMContentLoaded', () => {
+            App.init();
         });
-    }
-</script>
+
+    </script>
+
 </body>
+
 </html>
